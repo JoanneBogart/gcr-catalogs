@@ -1,0 +1,10 @@
+# in case need separate class for forced source
+subclass_name: dc2_postgres.DC2ObjectCatalog
+connection:
+  {dbname : desc_dc2_drp, user : desc_dc2_drp_user, host : nerscdb03.nersc.gov}
+
+db_type :      postgres
+schema_name:   run21i_dr1b_v1_pg2
+dpdd_table:    dpdd
+dpdd_is_view:  True
+other_tables : [position, dpdd_ref, dpdd_forced]

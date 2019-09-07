@@ -118,3 +118,5 @@ Session.vim
 pytest_session.txt
 .pytest_cache/
 
+# emacs back up files
+*.*~

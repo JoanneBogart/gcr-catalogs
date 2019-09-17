@@ -2,6 +2,8 @@ import os
 import warnings
 import psycopg2
 import numpy as np
+import re
+
 from GCR import BaseGenericCatalog
 #from .utils import md5, is_string_like
 
@@ -28,7 +30,68 @@ def _translate_dtype(pg_type):
         return to_translate[pg_type]
     else:
         return pg_type
+    
+_numeric = ' *(?P<num_const>[-+]?\d+(.\d+)?) *'
+_tractnum = ' *(?P<tract_num>\d+) *'
+_patch = ' *(?P<patch_s>\d,\d) *'
+_rdop = ' *(?P<operator><=|>=|<|>) *'
+_radec = '(?P<axis>ra|dec)'
+_tractop = ' *(?P<operator><=|>=|<|>|=|!=) *'
+_patchop = ' *(?P<operator>=|!=) *'
+_tract_func = 'tract_from_object_id(objectid)'
+_patch_func = 'patch_s_from_object_id(objectid)'
 
+_axis_left_pat = re.compile(_radec + _rdop + _numeric)
+_axis_right_pat = re.compile(_numeric + _rdop + _radec)
+
+_tract_left_pat = re.compile(' *tract *' + _tractop + _tractnum)
+_tract_right_pat =  re.compile(_tractnum + _tractop + ' *tract *')
+_patch_left_pat = re.compile(' *patch *' + _patchop + _patch)
+_patch_right_pat =  re.compile(_patch + _patchop + ' *patch *')
+##_tract_pat = re.compile(_tract_left + '|' +  _tract_right)
+def _optimize_filters(filters):
+    """
+    Look for conditions which can be optimized by use of UDFs. If found,
+    return rewritten version.
+
+    Parameters
+    ----------
+    Tuple of strings, each expressing a condition which will go in the 
+    'where' clause
+
+    Return
+    ------
+    Reworked list of condition strings.  May be shorter than original
+    and ordering may be different.
+    
+    """
+    ra_cond = []
+    dec_cond = []
+    tp_cond = [] # tract & patch filters should go before random; they're faster
+    done = []
+    others = []
+    for f in filters:
+        m = _tract_left_pat.match(f)
+        if not m: m = _tract_right_pat.match(f)
+        if m:
+            cond = f.replace('tract', _tract_func)
+            tp_cond.append(cond)
+            continue
+        m = _patch_left_pat.match(f)
+        if not m: m = _patch_right_pat.match(f)
+        if m:
+            print("original filter string: ", f)
+            print("patch_func: ", _patch_func)
+            cond1 = f.replace('patch', _patch_func)
+            the_patch = m.group('patch_s')
+            cond = cond1.replace(the_patch,"'" + the_patch + "'")
+            tp_cond.append(cond)
+            continue
+            
+        others.append(f)
+    done = tp_cond + others
+    return done
+    
 class DC2ObjectCatalog(BaseGenericCatalog):
     """
     Reader for Postgres tables corresponding to object catalog in DC2
@@ -73,7 +136,7 @@ class DC2ObjectCatalog(BaseGenericCatalog):
                 # convenience
                 if r[0] == 'coord':  continue 
                 self._native_dpdd_dtypes[r[0]] = _translate_dtype(r[1])
-                print('Item ', r[0],' has dtype ',r[1])
+                #print('Item ', r[0],' has dtype ',r[1])
 
         # likely self._quantity_modifiers should be a dict where keys
         # are column names in the dpdd and values are all
@@ -146,7 +209,8 @@ class DC2ObjectCatalog(BaseGenericCatalog):
             all_filters = self.base_filters
 
         if all_filters:
-            query_where_clause = 'WHERE ({})'.format(') AND ('.join(all_filters))
+            opt_filters = _optimize_filters(all_filters)
+            query_where_clause = 'WHERE ({})'.format(') AND ('.join(opt_filters))
         else:
             query_where_clause = ''
 

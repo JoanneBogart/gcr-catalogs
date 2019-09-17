@@ -32,7 +32,8 @@ def test_pg():
     #  objects = gc['objectid']
     #  print(len(objects))
     clean_objects = gc.get_quantities(['objectid','ra', 'dec'],
-                                      native_filters=['clean'])
+                                      native_filters=['clean', 'tract=4850',
+                                                      'patch=4,2'])
     for k in clean_objects:
         print('Got data for ',k)
 

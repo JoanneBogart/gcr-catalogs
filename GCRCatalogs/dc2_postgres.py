@@ -30,8 +30,14 @@ def _translate_dtype(pg_type):
         return to_translate[pg_type]
     else:
         return pg_type
-    
-_numeric = ' *(?P<num_const>[-+]?\d+(.\d+)?) *'
+
+_float = '[-+]?\d+(.\d+)?'
+_numeric = ' *(?P<num_const>' + _float + ') *'
+
+_ra = ' *(?P<ra_const>' + _float + ') *'
+_dec = ' *(?P<dec_const>' + _float + ') *'
+_radius = ' *(?P<radius_const>' + _float + ') *'
+_cone = 'in_cone\(ra *=' + _ra + ', *dec *=' + _dec + ', *radius=' + _radius + '\) *'
 _tractnum = ' *(?P<tract_num>\d+) *'
 _patch = ' *(?P<patch_s>\d,\d) *'
 _rdop = ' *(?P<operator><=|>=|<|>) *'
@@ -48,7 +54,8 @@ _tract_left_pat = re.compile(' *tract *' + _tractop + _tractnum)
 _tract_right_pat =  re.compile(_tractnum + _tractop + ' *tract *')
 _patch_left_pat = re.compile(' *patch *' + _patchop + _patch)
 _patch_right_pat =  re.compile(_patch + _patchop + ' *patch *')
-##_tract_pat = re.compile(_tract_left + '|' +  _tract_right)
+_cone_pat = re.compile(_cone)
+
 def _optimize_filters(filters):
     """
     Look for conditions which can be optimized by use of UDFs. If found,
@@ -69,6 +76,7 @@ def _optimize_filters(filters):
     dec_cond = []
     tp_cond = [] # tract & patch filters should go before random; they're faster
     done = []
+    geo = []
     others = []
     for f in filters:
         m = _tract_left_pat.match(f)
@@ -87,9 +95,17 @@ def _optimize_filters(filters):
             cond = cond1.replace(the_patch,"'" + the_patch + "'")
             tp_cond.append(cond)
             continue
-            
+        m = _cone_pat.match(f)
+        if m:
+            ra_value = m.group('ra_const')
+            dec_value = m.group('dec_const')
+            radius_value = m.group('radius_const')
+            cond = 'coneSearch(coord,{},{},{})'.format(ra_value, dec_value, radius_value)
+            #print("Replacement text: \n", cond)
+            geo.append(cond)
+            continue
         others.append(f)
-    done = tp_cond + others
+    done = geo + tp_cond + others
     return done
     
 class DC2ObjectCatalog(BaseGenericCatalog):
@@ -136,7 +152,6 @@ class DC2ObjectCatalog(BaseGenericCatalog):
                 # convenience
                 if r[0] == 'coord':  continue 
                 self._native_dpdd_dtypes[r[0]] = _translate_dtype(r[1])
-                #print('Item ', r[0],' has dtype ',r[1])
 
         # likely self._quantity_modifiers should be a dict where keys
         # are column names in the dpdd and values are all
@@ -200,7 +215,6 @@ class DC2ObjectCatalog(BaseGenericCatalog):
         Must return a numpy 1d array.
         """
 
-        ###cursor = self._conn.cursor()
         conn = self._conn
 
         if native_filters is not None:
@@ -229,7 +243,7 @@ class DC2ObjectCatalog(BaseGenericCatalog):
 
             print('Full query: ', query)
 
-            #exit(0)
+            #exit(0)  #   uncomment for debugging
             # may need to switch to fetchmany for larger dataset
             with conn.cursor() as cursor:
                 cursor.execute(query)

@@ -31,14 +31,26 @@ def test_pg():
     # Just fetching one column with no cuts works
     #  objects = gc['objectid']
     #  print(len(objects))
-    clean_objects = gc.get_quantities(['objectid','ra', 'dec'],
-                                      native_filters=['clean', 'tract=4850',
-                                                      'patch=4,2'])
-    for k in clean_objects:
-        print('Got data for ',k)
 
-    print(len(clean_objects))
-    print(len(clean_objects['ra']))
+    #   Comment out temporarily while trying out cone
+    # clean_objects = gc.get_quantities(['objectid','ra', 'dec'],
+    #                                   native_filters=['clean', 'tract=4850',
+    #                                                   'patch=4,2'])
+    # for k in clean_objects:
+    #     print('Got data for ',k)
+
+    # print(len(clean_objects))
+    # print(len(clean_objects['ra']))
+
+    ra = 61.2
+    de = -29.1
+    radius = 20 # in arcseconds
+
+    cone_condition='in_cone(ra={},dec={},radius={})'.format(ra,de,radius)
+
+    in_cone = gc.get_quantities(['objectid', 'ra', 'dec'],
+                                native_filters=[cone_condition, 'clean'])
+    print('#objects in cone: ',len(in_cone['ra']))
 
 # def test_get_missing_column(load_dc2_catalog):
 #     """Verify that a missing column gets correct defaults.

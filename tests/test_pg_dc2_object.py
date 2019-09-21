@@ -12,12 +12,9 @@ import GCRCatalogs
 def load_dc2_pg_catalog():
     """Convenience function to provide catalog"""
     this_dir = os.path.dirname(__file__)
-    #reader = 'dc2_object_run1.1p_tract4850'
-    reader='dc2_object_run2.1_dr1b_pg2'
+    #reader='dc2_object_run2.1_dr1b_pg2'
+    reader='dc2_object_run2.1.1i_v1_pg'
     
-    #config = {'base_dir': os.path.join(this_dir, 'dc2_object_data'),
-    #          'filename_pattern': 'test_object_tract_4850.hdf5'}
-    #return GCRCatalogs.load_catalog(reader, config)
     return GCRCatalogs.load_catalog(reader)
 
 #  Make tests doing some simple queries.  It's hard to imagine anything
@@ -43,34 +40,24 @@ def test_pg():
     # print(len(clean_objects['ra']))
 
     ra = 61.2
-    de = -29.1
+    #de = -29.1
+    de = -35.1
     radius = 20 # in arcseconds
 
-    cone_condition='in_cone(ra={},dec={},radius={})'.format(ra,de,radius)
+    # Keyword version
+    oldcone_condition='in_cone(ra={},dec={},radius={})'.format(ra,de,radius)
+
+    # Call interface for non-keyword version is in_cone(ra, dec, radius)
+    cone_condition='in_cone({},{},{})'.format(ra,de,radius)
 
     in_cone = gc.get_quantities(['objectid', 'ra', 'dec'],
                                 native_filters=[cone_condition, 'clean'])
     print('#objects in cone: ',len(in_cone['ra']))
 
-# def test_get_missing_column(load_dc2_catalog):
-#     """Verify that a missing column gets correct defaults.
-
-#     Uses just a local minimal HDF5 file and schema.yaml
-#     """
-#     gc = load_dc2_catalog
-
-#     empty_float_column_should_be_nan = gc['g_base_PsfFlux_flux']
-#     empty_int_column_should_be_neg1 = gc['g_parent']
-#     empty_bool_column_should_be_False = gc['g_base_SdssShape_flag']
-
-#     assert_array_equal(empty_float_column_should_be_nan,
-#                        np.repeat(np.nan, len(gc)))
-#     assert_array_equal(empty_int_column_should_be_neg1,
-#                        np.repeat(-1, len(gc)))
-#     assert_array_equal(empty_bool_column_should_be_False,
-#                        np.repeat(False, len(gc)))
-
-
+    box_condition = 'in_box({},{},{},{})'.format(61.0,62,-38.8, -37.7)
+    in_box = gc.get_quantities(['ra','dec'], native_filters=[box_condition])
+    print('#objects in box: ',len(in_box['ra']))    
+   
 # def test_get_tract_patch(load_dc2_catalog):
 #     """Verify that we get tract, patch columns correctly.
 
@@ -88,4 +75,6 @@ def test_pg():
 #     assert_array_equal(tract_col, np.repeat(tract, len(gc)))
 #     assert_array_equal(patch_col, np.repeat(patch, len(gc)))
 
+if __name__== "__main__":
+    test_pg()
 

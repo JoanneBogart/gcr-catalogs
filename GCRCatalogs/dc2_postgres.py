@@ -37,7 +37,13 @@ _numeric = ' *(?P<num_const>' + _float + ') *'
 _ra = ' *(?P<ra_const>' + _float + ') *'
 _dec = ' *(?P<dec_const>' + _float + ') *'
 _radius = ' *(?P<radius_const>' + _float + ') *'
-_cone = 'in_cone\(ra *=' + _ra + ', *dec *=' + _dec + ', *radius=' + _radius + '\) *'
+_oldcone = 'in_cone\(ra *=' + _ra + ', *dec *=' + _dec + ', *radius=' + _radius + '\) *'
+_cone = 'in_cone\(' + _ra + ', *' + _dec + ', *' + _radius + '\) *'
+_ra1 = ' *(?P<ra1_const>' + _float + ') *'
+_ra2 = ' *(?P<ra2_const>' + _float + ') *'
+_dec1 = ' *(?P<dec1_const>' + _float + ') *'
+_dec2 = ' *(?P<dec2_const>' + _float + ') *'
+_box = 'in_box\(' + _ra1 + ', *'  + _ra2 + ', *' + _dec1 + ', *' + _dec2 + '\) *'
 _tractnum = ' *(?P<tract_num>\d+) *'
 _patch = ' *(?P<patch_s>\d,\d) *'
 _rdop = ' *(?P<operator><=|>=|<|>) *'
@@ -55,7 +61,7 @@ _tract_right_pat =  re.compile(_tractnum + _tractop + ' *tract *')
 _patch_left_pat = re.compile(' *patch *' + _patchop + _patch)
 _patch_right_pat =  re.compile(_patch + _patchop + ' *patch *')
 _cone_pat = re.compile(_cone)
-
+_box_pat = re.compile(_box)
 def _optimize_filters(filters):
     """
     Look for conditions which can be optimized by use of UDFs. If found,
@@ -97,11 +103,21 @@ def _optimize_filters(filters):
             continue
         m = _cone_pat.match(f)
         if m:
-            ra_value = m.group('ra_const')
-            dec_value = m.group('dec_const')
-            radius_value = m.group('radius_const')
-            cond = 'coneSearch(coord,{},{},{})'.format(ra_value, dec_value, radius_value)
+            ra_v = m.group('ra_const')
+            dec_v = m.group('dec_const')
+            radius_v = m.group('radius_const')
+            cond = 'coneSearch(coord,{},{},{})'.format(ra_v, dec_v, radius_v)
             #print("Replacement text: \n", cond)
+            geo.append(cond)
+            continue
+        m = _box_pat.match(f)
+        if m:
+            ra1_v = m.group('ra1_const')
+            ra2_v = m.group('ra2_const')
+            dec1_v = m.group('dec1_const')
+            dec2_v = m.group('dec2_const')
+            cond = 'boxSearch(coord,{},{},{},{})'.format(ra1_v,ra2_v,dec1_v,
+                                                         dec2_v)
             geo.append(cond)
             continue
         others.append(f)

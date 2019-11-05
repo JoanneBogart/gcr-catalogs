@@ -58,11 +58,15 @@ class DC2Truth22CatalogReader(BaseGenericCatalog):
             self._column_descriptions = dict()
 
         results = cursor.execute('PRAGMA table_info({});'.format(self._table_name))
+        type_dict = {'BIGINT' : 'int64', 'INT' : 'int32', 'FLOAT' : 'float32',
+                     'DOUBLE' : 'float64'}
         self._native_quantity_dtypes = {t[1]: t[2] for t in results.fetchall()}
         for (k,v) in self._native_quantity_dtypes.items():
-            ## print('key {}   : value {}'.format(k, v))
-            if v == 'BIGINT':
-                self._native_quantity_dtypes[k] = 'int64'
+            #print('key {}   : value {}'.format(k, v))
+
+            if v in type_dict.keys():
+                self._native_quantity_dtypes[k] = type_dict[v]
+
         # if self._is_static:
         #     self._quantity_modifiers = {
         #         'agn': (lambda x: x.astype(np.bool)),

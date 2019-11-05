@@ -24,16 +24,20 @@ def test_truth():
     gc = load_truth_catalog()
     print('Catalog loaded')
     galaxies = gc['id']
+    res = gc.get_quantities(['id', 'ra', 'flux_r', 'is_pointsource'])
+    print('first id: ', res['id'][0])
+    print('first ra: ', res['ra'][0])
+    print('first flux_r: ', res['flux_r'][0])
+    print('first is_pointsource: ', res['is_pointsource'][0])
     print('Found {} galaxies'.format(len(galaxies)))
 
+    
     columns =gc.list_all_native_quantities()
 
     for c in columns: print(c)
     
-    ra = 61.99398718973142
-    #de = -29.1
-    de = -32.83695608408115
-    #radius = 20 # in arcseconds
+    #ra = 61.99398718973142
+    #de = -32.83695608408115
 
 
 if __name__== "__main__":
